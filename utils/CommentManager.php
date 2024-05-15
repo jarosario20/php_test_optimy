@@ -1,53 +1,76 @@
 <?php
+namespace Utils;
+
+use DateTime;
+use MyClass\Comments;
 
 class CommentManager
 {
 	private static $instance = null;
+	private $db;
 
 	private function __construct()
 	{
-		require_once(ROOT . '/utils/DB.php');
-		require_once(ROOT . '/class/Comment.php');
+		$this->db = DB::getInstance();
 	}
 
-	public static function getInstance()
+	public static function getInstance(): self
 	{
 		if (null === self::$instance) {
-			$c = __CLASS__;
-			self::$instance = new $c;
+			self::$instance = new self();
 		}
 		return self::$instance;
 	}
 
-	public function listComments()
+	/**
+	* list all comments
+	* @return Comments[]
+	*/
+	public function listComments(): array
 	{
-		$db = DB::getInstance();
-		$rows = $db->select('SELECT * FROM `comment`');
+		$rows = $this->db->select('SELECT * FROM `comment`');
 
 		$comments = [];
 		foreach($rows as $row) {
-			$n = new Comment();
+			$n = new Comments();
 			$comments[] = $n->setId($row['id'])
 			  ->setBody($row['body'])
-			  ->setCreatedAt($row['created_at'])
+			  ->setCreatedAt(new DateTime($row['created_at']))
 			  ->setNewsId($row['news_id']);
 		}
 
 		return $comments;
 	}
 
-	public function addCommentForNews($body, $newsId)
+	/**
+	* add a record in comment for news in comment table
+	* @param string $body
+	* @param int $newsId
+	* @return int
+	*/
+	public function addCommentForNews(string $body, int $newsId): int
 	{
-		$db = DB::getInstance();
-		$sql = "INSERT INTO `comment` (`body`, `created_at`, `news_id`) VALUES('". $body . "','" . date('Y-m-d') . "','" . $newsId . "')";
-		$db->exec($sql);
-		return $db->lastInsertId($sql);
+		$params = [
+            'body' => $body,
+            'created_at' => date('Y-m-d H:i:s'),
+            'news_id' => $newsId
+        ];
+		$sql = "INSERT INTO `comment` (`body`, `created_at`, `news_id`) VALUES(:body, :created_at, :news_id)";
+		$this->db->exec($sql, $params);
+		return (int)$this->db->lastInsertId();
 	}
 
-	public function deleteComment($id)
+	/**
+	* deletes a comment
+	* @param int $id
+    * @return int
+	*/
+	public function deleteComment(int $id): int
 	{
-		$db = DB::getInstance();
-		$sql = "DELETE FROM `comment` WHERE `id`=" . $id;
-		return $db->exec($sql);
+		$params = [
+            'id' => $id
+        ];
+		$sql = "DELETE FROM `comment` WHERE `id`= :id" ;
+		return $this->db->exec($sql, $params);
 	}
 }

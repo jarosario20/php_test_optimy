@@ -1,32 +1,33 @@
 <?php
+namespace Utils;
 
+use DateTime;
+use MyClass\News;
 class NewsManager
 {
 	private static $instance = null;
+	private $db;
 
 	private function __construct()
 	{
-		require_once(ROOT . '/utils/DB.php');
-		require_once(ROOT . '/utils/CommentManager.php');
-		require_once(ROOT . '/class/News.php');
+		$this->db = DB::getInstance();
 	}
 
-	public static function getInstance()
+	public static function getInstance(): self
 	{
 		if (null === self::$instance) {
-			$c = __CLASS__;
-			self::$instance = new $c;
+			self::$instance = new self();
 		}
 		return self::$instance;
 	}
 
 	/**
 	* list all news
+	* @return News[]
 	*/
-	public function listNews()
+	public function listNews(): array
 	{
-		$db = DB::getInstance();
-		$rows = $db->select('SELECT * FROM `news`');
+		$rows = $this->db->select('SELECT * FROM `news`');
 
 		$news = [];
 		foreach($rows as $row) {
@@ -34,7 +35,7 @@ class NewsManager
 			$news[] = $n->setId($row['id'])
 			  ->setTitle($row['title'])
 			  ->setBody($row['body'])
-			  ->setCreatedAt($row['created_at']);
+			  ->setCreatedAt(new DateTime($row['created_at']));
 		}
 
 		return $news;
@@ -42,21 +43,31 @@ class NewsManager
 
 	/**
 	* add a record in news table
+	* @param string $title
+	* @param string $body
+	* @return int
 	*/
-	public function addNews($title, $body)
+	public function addNews(string $title, string $body): int
 	{
-		$db = DB::getInstance();
-		$sql = "INSERT INTO `news` (`title`, `body`, `created_at`) VALUES('". $title . "','" . $body . "','" . date('Y-m-d') . "')";
-		$db->exec($sql);
-		return $db->lastInsertId($sql);
+		$params = [
+            'title' => $title,
+            'body' => $body,
+            'created_at' => date('Y-m-d H:i:s')
+        ];
+		$sql = "INSERT INTO `news` (`title`, `body`, `created_at`) VALUES(:title, :body, :created_at)";
+		$this->db->exec($sql, $params);
+		return (int)$this->db->lastInsertId();
 	}
 
 	/**
 	* deletes a news, and also linked comments
+	* @param int $id
+    * @return int
 	*/
-	public function deleteNews($id)
+	public function deleteNews(int $id): int
 	{
-		$comments = CommentManager::getInstance()->listComments();
+		$commentManager = CommentManager::getInstance();
+		$comments = $commentManager->listComments();
 		$idsToDelete = [];
 
 		foreach ($comments as $comment) {
@@ -65,12 +76,12 @@ class NewsManager
 			}
 		}
 
-		foreach($idsToDelete as $id) {
-			CommentManager::getInstance()->deleteComment($id);
+		foreach($idsToDelete as $idToDelete) {
+			$commentManager->deleteComment($idToDelete);
 		}
 
-		$db = DB::getInstance();
-		$sql = "DELETE FROM `news` WHERE `id`=" . $id;
-		return $db->exec($sql);
+		$params = ['id' => $id];
+		$sql = "DELETE FROM `news` WHERE `id` = :id";
+		return $this->db->exec($sql, $params);
 	}
 }

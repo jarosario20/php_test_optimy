@@ -1,4 +1,10 @@
 <?php
+namespace Utils;
+
+use PDO;
+use PDOException;
+use Exception;
+
 class DB
 {
 	private $pdo;
@@ -13,12 +19,12 @@ class DB
 		$password = 'pass';
 
 		try {
-			$this->pdo = new \PDO($dsn, $user, $password, array(
-						\PDO::ATTR_PERSISTENT => true
+			$this->pdo = new PDO($dsn, $user, $password, array(
+						PDO::ATTR_PERSISTENT => true
 					));
-			$this->pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
-		} catch(\PDOException $e) {
-			throw new \Exception('Connection failed: ' . $e->getMessage());
+			$this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+		} catch(PDOException $e) {
+			throw new Exception('Connection failed: ' . $e->getMessage());
 		}
 	}
 
@@ -37,9 +43,9 @@ class DB
 		try {
             $sth = $this->pdo->prepare($sql);
             $sth->execute($params);
-            return $sth->fetchAll(\PDO::FETCH_ASSOC);
-        } catch (\PDOException $e) {
-            throw new \Exception('Select query failed: ' . $e->getMessage());
+            return $sth->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            throw new Exception('Select query failed: ' . $e->getMessage());
         }
 	}
 
@@ -50,8 +56,8 @@ class DB
             $sth = $this->pdo->prepare($sql);
             $sth->execute($params);
             return $sth->rowCount();
-        } catch (\PDOException $e) {
-            throw new \Exception('Exec query failed: ' . $e->getMessage());
+        } catch (PDOException $e) {
+            throw new Exception('Exec query failed: ' . $e->getMessage());
         }
     }
 
@@ -60,8 +66,8 @@ class DB
 	{
         try {
             return $this->pdo->lastInsertId();
-        } catch (\PDOException $e) {
-            throw new \Exception('Getting last insert ID failed: ' . $e->getMessage());
+        } catch (PDOException $e) {
+            throw new Exception('Getting last insert ID failed: ' . $e->getMessage());
         }
 	}
 }
